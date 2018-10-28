@@ -1,0 +1,1 @@
+java -jar kafka-connect-cli-1.0.6-all.jar create cassandra-sink-coins < cassandra-sink-distributed-coins.properties
