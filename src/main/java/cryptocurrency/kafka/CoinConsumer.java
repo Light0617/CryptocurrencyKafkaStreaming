@@ -43,7 +43,7 @@ public class CoinConsumer {
         final Serde<JsonNode> jsonSerde = Serdes.serdeFrom(jsonSerializer, jsonDeserializer);
 
         KStreamBuilder builder = new KStreamBuilder();
-        KStream<String, String> coins = builder.stream(Serdes.String(), Serdes.String(), "coins2");
+        KStream<String, String> coins = builder.stream(Serdes.String(), Serdes.String(), "coins");
 
         // create the initial json object for balances
         ObjectNode initialPriceInfo = JsonNodeFactory.instance.objectNode();

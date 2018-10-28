@@ -41,7 +41,7 @@ public class CoinProducer {
         for(String coin : coins.getCoinList().getCoins().keySet()){
             result.add(coin);
             count++;
-            if(count >= 3) break;
+            if(count >= 4) break;
         }
         return result;
     }
@@ -66,7 +66,7 @@ public class CoinProducer {
                 List<Double> prices = coinProducer.getPrice(coin);
                 for(double price: prices){
                     System.out.println(String.format("%s, %s", coin, price));
-                    producer.send(new ProducerRecord<>("coins2", coin, String.valueOf(price)));
+                    producer.send(new ProducerRecord<>("coins", coin, String.valueOf(price)));
                 }
             } catch (InterruptedException e) {
                 break;

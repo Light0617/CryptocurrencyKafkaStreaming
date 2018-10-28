@@ -1,5 +1,8 @@
 package cryptocurrency.kafka;
 
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.*;
 import org.apache.kafka.streams.StreamsConfig;
@@ -16,6 +19,13 @@ import org.apache.kafka.streams.kstream.KTable;
 import java.util.Properties;
 
 public class CoinVolatility {
+    private Session session;
+    private CassandraConnector client;
+    private void setUpSession() {
+        client = new CassandraConnector();
+        client.connect("127.0.0.1", 9042);
+        session = client.getSession();
+    }
     private static Properties settingConfig() {
         Properties config = new Properties();
         config.put(StreamsConfig.APPLICATION_ID_CONFIG, "bank-balance-application");
@@ -38,12 +48,13 @@ public class CoinVolatility {
     }
 
     public static void main(String[] args) {
-        final Serde<JsonNode> jsonSerde = getJsonSerde();
+        CassandraConnector client = new CassandraConnector();
+        client.connect("127.0.0.1", 9042);
+        Session session = client.getSession();
 
+        final Serde<JsonNode> jsonSerde = getJsonSerde();
         KStreamBuilder builder = new KStreamBuilder();
         KStream<String, JsonNode> coinInfo = builder.stream(Serdes.String(), jsonSerde, "coins-price-info");
-
-
 
         // create the initial json object for balances
         ObjectNode initCoinVolatility= getInitVolatility();
@@ -52,12 +63,11 @@ public class CoinVolatility {
                 .groupByKey(Serdes.String(), jsonSerde)
                 .aggregate(
                         () -> initCoinVolatility,
-                        (key, info, volatility) -> generateVolatility(key, info, volatility),
+                        (key, info, volatility) -> generateVolatility(session, key, info, volatility),
                         jsonSerde,
                         "coins-volatility-agg"
                 );
         PriceInfo.to(Serdes.String(), jsonSerde, "coins-volatility");
-
 
         KafkaStreams streams = new KafkaStreams(builder, settingConfig());
         streams.cleanUp();
@@ -78,16 +88,39 @@ public class CoinVolatility {
     }
 
 
-    private static JsonNode generateVolatility(String key, JsonNode info, JsonNode volatility) {
+    private static JsonNode generateVolatility(Session session, String key, JsonNode info, JsonNode volatility) {
         ObjectNode newVolatility = JsonNodeFactory.instance.objectNode();
         String timeStamp = String.valueOf(System.currentTimeMillis());
         double sumOfSquares = info.get("sumOfSquares").asDouble();
         //System.out.println(String.format("sumOfSquares = %d", sumOfSquares));
         double NMeanOfSquares = Math.pow(info.get("sum").asDouble(), 2) / info.get("count").asDouble();
+        String vol = String.valueOf(sumOfSquares - NMeanOfSquares);
         newVolatility.put("volatility", sumOfSquares - NMeanOfSquares);
         newVolatility.put("id", key);
         newVolatility.put("created", timeStamp);
+
+        insertOrUpdate(session, key, timeStamp, vol);
         return newVolatility;
+    }
+
+    private static void insertOrUpdate(Session session, String key, String timeStamp, String volatility){
+        int count = getCount(session, key);
+        String query;
+        if (count == 0) {
+            query = String.format("insert into demo.coins (id, created, volatility) values ('%s', '%s', %s);"
+                    ,key, timeStamp, volatility);
+        } else {
+            query = String.format("update demo.coins set created='%s',volatility=%s where id='%s'"
+                    ,timeStamp, volatility, key);
+        }
+        session.execute(query);
+    }
+
+    private static int getCount(Session session, String id) {
+        String query = String.format("select count(*) from demo.coins where id = '%s'", id);
+        ResultSet result = session.execute(query);
+        Row row = result.one();
+        return Integer.parseInt(row.getToken("count").toString());
     }
 
 }
