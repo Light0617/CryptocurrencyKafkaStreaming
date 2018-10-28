@@ -61,9 +61,9 @@ public class CassandraTest {
         System.out.println(row.getToken("count"));
     }
 
-    @Test void createTable() {
-        String tableName = "coins2";
-        String query = String.format("create table %s (id text, created text, volatility float, primary key(id));", tableName);
-        session.execute(query);
-    }
+//    @Test void createTable() {
+//        String tableName = "coins2";
+//        String query = String.format("create table %s (id text, created text, volatility float, primary key(id));", tableName);
+//        session.execute(query);
+//    }
 }

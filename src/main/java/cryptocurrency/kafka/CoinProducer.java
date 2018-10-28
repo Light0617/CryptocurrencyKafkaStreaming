@@ -41,7 +41,7 @@ public class CoinProducer {
         for(String coin : coins.getCoinList().getCoins().keySet()){
             result.add(coin);
             count++;
-            if(count >= 4) break;
+            //if(count >= 4) break;
         }
         return result;
     }

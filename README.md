@@ -12,6 +12,7 @@ bin/kafka-server-start.sh config/server.properties
 ## launch Cassandra
 ~~~
 source /Users/light0617/.bash_profile
+export CASSANDRA_HOME=/opt/cassandra
 /opt/cassandra/bin/cassandra
 cqlsh
 ~~~
